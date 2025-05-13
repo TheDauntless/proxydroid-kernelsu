@@ -357,7 +357,7 @@ public class ProxyDroidService extends Service {
 
         Intent intent = new Intent(this, ProxyDroid.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        pendIntent = PendingIntent.getActivity(this, 0, intent, 0);
+        pendIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
     }
 
     /**
@@ -365,9 +365,6 @@ public class ProxyDroidService extends Service {
      */
     @Override
     public void onDestroy() {
-
-        ((ProxyDroidApplication)getApplication())
-                .firebaseAnalytics.logEvent("service_stop", null);
 
         Utils.setConnecting(true);
 
@@ -552,8 +549,6 @@ public class ProxyDroidService extends Service {
             return;
         }
 
-        ((ProxyDroidApplication)getApplication())
-                .firebaseAnalytics.logEvent("service_start", null);
 
         Log.d(TAG, "Service Start");
 

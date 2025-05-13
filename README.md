@@ -2,44 +2,32 @@
 
 Global Proxy App for Android System
 
-ProxyDroid is distributed under GPLv3 with many other open source software, 
-here is a list of them:
+ProxyDroid is distributed under GPLv3 with many other open source software, here is a list of them:
 
- * cntlm - authentication proxy: http://cntlm.sourceforge.net/
- * redsocks - transparent socks redirector: http://darkk.net.ru/redsocks/
- * netfilter/iptables - NAT module: http://www.netfilter.org/
- * transproxy - transparent proxy for HTTP: http://transproxy.sourceforge.net/
- * stunnel - multiplatform SSL tunneling proxy: http://www.stunnel.org/
+* cntlm - authentication proxy: http://cntlm.sourceforge.net/
+* redsocks - transparent socks redirector: http://darkk.net.ru/redsocks/
+* netfilter/iptables - NAT module: http://www.netfilter.org/
+* transproxy - transparent proxy for HTTP: http://transproxy.sourceforge.net/
+* stunnel - multiplatform SSL tunneling proxy: http://www.stunnel.org/
 
-## TRAVIS CI STATUS
+## Modifications
 
-[![Build Status](https://secure.travis-ci.org/madeye/proxydroid.png)](http://travis-ci.org/madeye/proxydroid)
+* Update gradle
+* Update minimum sdk to 21
+* Remove crashlytics
+* Fixed libevent compilation with arc4random_addrandom
+* Removed google services
+* Remove deprecated wm.getConfiguredNetworks();
 
-[Nightly Builds](http://buildbot.sinaapp.com)
+## Compilation
 
-## PREREQUISITES
+Tested with
 
-* JDK 1.6+
-* Maven 3.0.5
-* Android SDK r17+
-* Android NDK r8+
+* javac 22.0.2
+* Gradle 8.13
 
-* Local Maven Dependencies
-
-  Use Maven Android SDK Deployer to install all android related dependencies.
-
-  ```bash
-  git clone https://github.com/mosabua/maven-android-sdk-deployer.git 
-  pushd maven-android-sdk-deployer
-  export ANDROID_HOME=/path/to/android/sdk
-  mvn install -P 4.1
-  popd
-  ```
-
-## BUILD
-
-Invoke the building like this
-
-```bash
-  mvn clean install
+```console
+gradle build
+# File written to ./app/build/outputs/apk/release/app-release-unsigned.apk
 ```
+

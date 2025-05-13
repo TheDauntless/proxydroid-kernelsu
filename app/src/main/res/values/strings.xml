@@ -15,7 +15,7 @@
     <string name="user_empty">User name should not be empty</string>
     <string name="port_alert">The port number should be greater than 1024</string>
     <string name="crash_alert">You are recovering from a crash. \n\nplease report your problem to the project page. \n\n(proxydroid.googlecode.com)</string>
-    <string name="require_root_alert">PLEASE ROOT YOUR DEVICE FIRST !!!</string>
+    <string name="require_root_alert">Please enable root access</string>
     <string name="update_finished">Programs and configurations have been updated</string>
 
     <!-- status string -->

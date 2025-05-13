@@ -37,7 +37,7 @@
  */
 
 package org.proxydroid;
-
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -48,10 +48,12 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.AssetManager;
 import android.net.ConnectivityManager;
 import android.net.Uri;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -66,6 +68,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceManager;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -79,10 +82,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.AdView;
-import com.google.android.gms.ads.MobileAds;
+import androidx.core.content.ContextCompat;
+
 import com.ksmaze.android.preference.ListPreferenceMultiSelect;
 
 import org.proxydroid.utils.Constraints;
@@ -92,6 +93,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -138,7 +140,6 @@ public class ProxyDroid extends PreferenceActivity
     private CheckBoxPreference isBypassAppsCheck;
     private Preference proxyedApps;
     private Preference bypassAddrs;
-    private AdView adView;
     private BroadcastReceiver ssidReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -252,41 +253,47 @@ public class ProxyDroid extends PreferenceActivity
     }
 
     private void loadNetworkList() {
-        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        List<WifiConfiguration> wcs = wm.getConfiguredNetworks();
-        String[] ssidEntries = null;
-        String[] pureSsid = null;
-        int n = 3;
-        int wifiIndex = n;
 
-        if (wcs == null) {
-            ssidEntries = new String[n];
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this.getApplicationContext(),"Access fine location permission not granted", Toast.LENGTH_LONG).show();
+            return;
+        }
 
-            ssidEntries[0] = Constraints.WIFI_AND_3G;
-            ssidEntries[1] = Constraints.ONLY_WIFI;
-            ssidEntries[2] = Constraints.ONLY_3G;
-        } else {
-            ssidEntries = new String[wcs.size() + n];
+        WifiManager wm = (WifiManager) getApplicationContext()
+                .getSystemService(Context.WIFI_SERVICE);
 
-            ssidEntries[0] = Constraints.WIFI_AND_3G;
-            ssidEntries[1] = Constraints.ONLY_WIFI;
-            ssidEntries[2] = Constraints.ONLY_3G;
+        // 1) Ensure we have location permission (see above) before scanning
+        wm.startScan();  // trigger an asynchronous scan
 
-            for (WifiConfiguration wc : wcs) {
-                if (wc != null && wc.SSID != null) {
-                    ssidEntries[n++] = wc.SSID.replace("\"", "");
-                } else {
-                    ssidEntries[n++] = "unknown";
-                }
+        // 2) Get the results
+        List<ScanResult> scanResults = wm.getScanResults();
+        // scanResults contains SSID, BSSID, level, etc.
+
+        // 3) Build your entries array
+        List<String> entries = new ArrayList<>();
+        // your three fixed options first
+        entries.add(Constraints.WIFI_AND_3G);
+        entries.add(Constraints.ONLY_WIFI);
+        entries.add(Constraints.ONLY_3G);
+
+        // then the SSIDs from the scan (empty SSIDs will be skipped)
+        for (ScanResult r : scanResults) {
+            if (!TextUtils.isEmpty(r.SSID)) {
+                entries.add(r.SSID);
             }
         }
+
+        String[] ssidEntries = entries.toArray(new String[0]);
         ssidList.setEntries(ssidEntries);
         ssidList.setEntryValues(ssidEntries);
 
-        pureSsid = Arrays.copyOfRange(ssidEntries, wifiIndex, ssidEntries.length);
+        // excluded list = everything after the first three
+        String[] pureSsid = Arrays.copyOfRange(ssidEntries, 3, ssidEntries.length);
         excludedSsidList.setEntries(pureSsid);
         excludedSsidList.setEntryValues(pureSsid);
     }
+
 
     @Override
     public void onStart() {
@@ -315,27 +322,10 @@ public class ProxyDroid extends PreferenceActivity
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.xml.proxydroid_preference);
 
-        ((ProxyDroidApplication)getApplication())
-                .firebaseAnalytics.setCurrentScreen(this, "home_screen", null);
-
-        // Create the adView
-        adView = new AdView(this);
-        adView.setAdUnitId("ca-app-pub-9097031975646651/4806879927");
-        adView.setAdSize(AdSize.SMART_BANNER);
         // Lookup your LinearLayout assuming it’s been given
         // the attribute android:id="@+id/mainLayout"
         ViewParent parent = getListView().getParent();
         LinearLayout layout = getLayout(parent);
-
-        // disable adds
-        if (layout != null) {
-            // Add the adView to it
-            layout.addView(adView, 0);
-            adView.loadAd(new AdRequest.Builder()
-                    .addTestDevice("F58907F28184A828DD0DB6F8E38189C6")
-                    .addTestDevice("236666026C17FEFB1B547C4A3B2322CD")
-                    .build());
-        }
 
         hostText = (EditTextPreference) findPreference("host");
         portText = (EditTextPreference) findPreference("port");
@@ -357,6 +347,22 @@ public class ProxyDroid extends PreferenceActivity
         isPACCheck = (CheckBoxPreference) findPreference("isPAC");
         isAutoConnectCheck = (CheckBoxPreference) findPreference("isAutoConnect");
         isBypassAppsCheck = (CheckBoxPreference) findPreference("isBypassApps");
+
+
+        isAutoSetProxyCheck.setOnPreferenceChangeListener((preference, newValue) -> {
+            boolean checked = (Boolean) newValue;
+            if (checked) {
+                if (!Utils.isRoot()) {
+                    handler.sendEmptyMessage(MSG_NO_ROOT);
+                    return false;
+                }
+            }
+            // return true to persist the new value
+            return true;
+        });
+
+
+
 
         final SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -392,10 +398,6 @@ public class ProxyDroid extends PreferenceActivity
                     // Nothing
                 }
 
-                if (!Utils.isRoot()) {
-                    handler.sendEmptyMessage(MSG_NO_ROOT);
-                }
-
                 String versionName;
                 try {
                     versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
@@ -429,8 +431,6 @@ public class ProxyDroid extends PreferenceActivity
      */
     @Override
     public void onDestroy() {
-
-        if (adView != null) adView.destroy();
 
         if (ssidReceiver != null) unregisterReceiver(ssidReceiver);
 
